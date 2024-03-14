@@ -52,7 +52,7 @@ typedef struct {
 } ini_pair;
 
 ini_pair* ini_read_n(const char* ini, ini_size_t ini_len, ini_err* err_ptr);
-ini_pair* ini_read(const char* ini, ini_err* err_ptr);
+#define ini_read(ini, err_ptr) ini_read_n(ini, 0, err_ptr)
 
 ini_pair* ini_get(const char* key, ini_pair* prev);
 

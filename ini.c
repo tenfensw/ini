@@ -1,3 +1,7 @@
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS 1
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -28,8 +32,7 @@ void ini_unquote_value(ini_pair* cur, const ini_size_t value_len) {
     if (!IS_QUOTED(cur->value, value_len))
         return;
 
-    char buf[value_len + 1];
-    memset(buf, 0, value_len + 1);
+    char buf[INI_PAIR_VALUE_MAX_LEN + 1];
 
     ini_size_t len = 0;
     bool is_escape = false;
@@ -41,7 +44,9 @@ void ini_unquote_value(ini_pair* cur, const ini_size_t value_len) {
             is_escape = true;
         else {
             is_escape = false;
+
             buf[len++] = cc;
+            buf[len] = '\0';
         }
     }
 
@@ -188,10 +193,6 @@ ini_pair* ini_read_n(const char* ini, ini_size_t ini_len, ini_err* err_ptr) {
 
 #undef ERR_RET
 #undef ERR_SET
-
-ini_pair* ini_read(const char* ini, ini_err* err_ptr) {
-    return ini_read_n(ini, 0, err_ptr);
-}
 
 ini_pair* ini_get(const char* key, ini_pair* last) {
     while (last) {
