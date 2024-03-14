@@ -19,6 +19,38 @@ void ini_free(ini_pair* last) {
     }
 }
 
+#define IS_QUOTED(input, input_len) \
+    (input && input_len >= 2 && \
+     input[0] == input[input_len - 1] && \
+     input[0] == '"')
+
+void ini_unquote_value(ini_pair* cur, const ini_size_t value_len) {
+    if (!IS_QUOTED(cur->value, value_len))
+        return;
+
+    char buf[value_len + 1];
+    memset(buf, 0, value_len + 1);
+
+    ini_size_t len = 0;
+    bool is_escape = false;
+
+    for (ini_size_t index = 1; index < value_len - 1; index++) {
+        const char cc = cur->value[index];
+
+        if (cc == '\\' && !is_escape)
+            is_escape = true;
+        else {
+            is_escape = false;
+            buf[len++] = cc;
+        }
+    }
+
+    memset(cur->value, 0, INI_PAIR_VALUE_MAX_LEN + 1);
+    strcpy(cur->value, buf);
+}
+
+#undef IS_QUOTED
+
 #define IS_BOOL(input, opt1, opt2) \
     (input && (tolower(input[0]) == opt1 || tolower(input[0]) == opt2))
 
@@ -28,7 +60,13 @@ void ini_free(ini_pair* last) {
 #define IS_FALSE(input) \
     IS_BOOL(input, 'f', 'n')
 
-void ini_conv_value(ini_pair* cur, const bool is_num, const bool is_dec) {
+void ini_conv_value(ini_pair* cur, const ini_size_t value_len,
+                    const bool is_num, const bool is_dec) {
+    if (value_len < 1)
+        return;
+
+    ini_unquote_value(cur, value_len);
+
     if (is_num) {
         if (is_dec)
             sscanf(cur->value, "%lf", &cur->f_value);
@@ -109,7 +147,8 @@ ini_pair* ini_read_n(const char* ini, ini_size_t ini_len, ini_err* err_ptr) {
             is_key = false;
             len = 0;
         } else if (cc == '\n') {
-            ini_conv_value(last, is_num, is_dec);
+            if (!is_key)
+                ini_conv_value(last, len, is_num, is_dec);
 
             is_begin = true;
             is_key = true;
