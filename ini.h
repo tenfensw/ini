@@ -24,7 +24,7 @@ typedef uint64_t ini_uint64_t;
 #define INI_ERR_MSG_MAX_LEN 127
 
 typedef struct {
-    uint32_t lnn;
+    ini_size_t lnn;
 
     char msg[INI_ERR_MSG_MAX_LEN + 1];
 } ini_err;
