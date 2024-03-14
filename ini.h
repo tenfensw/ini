@@ -32,6 +32,7 @@ typedef struct {
 #define INI_PAIR_KEY_MAX_LEN 31
 #define INI_PAIR_VALUE_MAX_LEN 511
 
+/// INI key=value pair representation
 typedef struct {
     char key[INI_PAIR_KEY_MAX_LEN + 1];
     char value[INI_PAIR_VALUE_MAX_LEN + 1];
@@ -46,14 +47,21 @@ typedef struct {
         double f_value;
     };
 
+    /// line number index (starts from 0) where the pair was encountered
     ini_size_t lnn;
 
     void* prev;
 } ini_pair;
 
+/// parses up to /ini_len/ bytes as INI UTF-8 C string and returns a linked list
+/// of INI key=value pair representations
 ini_pair* ini_read_n(const char* ini, ini_size_t ini_len, ini_err* err_ptr);
+/// parses the specified UTF-8 C string as INI
 #define ini_read(ini, err_ptr) ini_read_n(ini, 0, err_ptr)
 
+/// returns a valid ini_pair* reference pointing to an INI pair with the key
+/// matching the one specified or NULL
 ini_pair* ini_get(const char* key, ini_pair* prev);
 
+/// frees the entire linked list of INI key=value pairs
 void ini_free(ini_pair* prev);

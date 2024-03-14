@@ -59,12 +59,19 @@ int main(int argc, char** argv) {
     if (last) {
         ini_pair* cur = last;
 
-        while (cur) {
-            fprintf(stdout, "cur <%p>, ->key: %s, ->value: %s"
-                            ", ->u_value = %u\n",
-                            cur, cur->key, cur->value,
-                            cur->u_value);
-            cur = cur->prev;
+        if (argc < 3) {
+            while (cur) {
+                fprintf(stdout, "cur <%p>, ->key: %s, ->value: %s"
+                                ", ->u_value = %u\n",
+                                cur, cur->key, cur->value,
+                                cur->u_value);
+                cur = cur->prev;
+            }
+        } else {
+            ini_pair* found = ini_get(argv[2], cur);
+
+            if (found)
+                fprintf(stdout, "%s\n", found->value);
         }
 
         ini_free(last);
