@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include <ctype.h>
 
+#ifndef INI_NO_INT64
+#include <inttypes.h>
+#endif
+
 #include "ini.h"
 
 void ini_free(ini_pair* last) {
@@ -14,6 +18,36 @@ void ini_free(ini_pair* last) {
         last = prev;
     }
 }
+
+#define IS_BOOL(input, opt1, opt2) \
+    (input && (tolower(input[0]) == opt1 || tolower(input[0]) == opt2))
+
+#define IS_TRUE(input) \
+    IS_BOOL(input, 't', 'y')
+
+#define IS_FALSE(input) \
+    IS_BOOL(input, 'f', 'n')
+
+void ini_conv_value(ini_pair* cur, const bool is_num, const bool is_dec) {
+    if (is_num) {
+        if (is_dec)
+            sscanf(cur->value, "%lf", &cur->f_value);
+        else
+#ifndef INI_NO_INT64
+            sscanf(cur->value, "%" SCNi64, &cur->i64_value);
+#else
+            sscanf(cur->value, "%d", &cur->i_value);
+#endif
+    } else if (IS_TRUE(cur->value))
+        cur->u_value = 1;
+    else if (IS_FALSE(cur->value))
+        cur->u_value = 0;
+}
+
+#undef IS_FALSE
+#undef IS_TRUE
+
+#undef IS_BOOL
 
 #define ERR_SET(ptr, lnn_value, ...) { \
     if (ptr) { \
@@ -55,14 +89,16 @@ ini_pair* ini_read_n(const char* ini, ini_size_t ini_len, ini_err* err_ptr) {
 
     bool is_comment = false;
 
+    bool is_num = true;
+    bool is_dec = false;
+
     ini_size_t lnn = 0;
     ini_size_t len = 0;
 
     for (ini_size_t index = 0; index < ini_len; index++) {
         char cc = ini[index];
-        fprintf(stderr, "index = %u, cc = '%c'\n", index, cc);
 
-        if (isspace(cc) && is_begin)
+        if (isspace(cc) && len < 1)
             continue;
         else if (cc == '#' && is_begin)
             is_comment = true;
@@ -73,10 +109,15 @@ ini_pair* ini_read_n(const char* ini, ini_size_t ini_len, ini_err* err_ptr) {
             is_key = false;
             len = 0;
         } else if (cc == '\n') {
+            ini_conv_value(last, is_num, is_dec);
+
             is_begin = true;
             is_key = true;
 
             is_comment = false;
+
+            is_num = true;
+            is_dec = false;
 
             len = 0;
             lnn++;
@@ -88,11 +129,14 @@ ini_pair* ini_read_n(const char* ini, ini_size_t ini_len, ini_err* err_ptr) {
 
             if (is_key)
                 last->key[len++] = cc;
-            else
-                last->value[len++] = cc;
+            else {
+                if (!isdigit(cc) && cc != '-' && cc != '.')
+                    is_num = false;
+                else if (cc == '.' && is_num)
+                    is_dec = true;
 
-            fprintf(stderr, "is_key = %u, len = %u, cc = '%c'\n",
-                            is_key, len, cc);
+                last->value[len++] = cc;
+            }
         }
 
         is_begin = false;
